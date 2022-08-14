@@ -2466,13 +2466,13 @@ ENDM
   CONFIG FOSC = INTRC_NOCLKOUT ; Oscillator Selection bits (INTOSCIO oscillator: I/O function on ((PORTA) and 07Fh), 6/OSC2/CLKOUT pin, I/O function on ((PORTA) and 07Fh), 7/OSC1/CLKIN)
   CONFIG WDTE = OFF ; Watchdog Timer Enable bit (WDT disabled and can be enabled by ((WDTCON) and 07Fh), 0 bit of the WDTCON register)
   CONFIG PWRTE = ON ; Power-up Timer Enable bit (PWRT enabled)
-  CONFIG MCLRE = OFF ; ((PORTE) and 07Fh), 3/MCLR pin function select bit (((PORTE) and 07Fh), 3/MCLR pin function is MCLR)
+  CONFIG MCLRE = ON ; ((PORTE) and 07Fh), 3/MCLR pin function select bit (((PORTE) and 07Fh), 3/MCLR pin function is MCLR)
   CONFIG CP = OFF ; Code Protection bit (Program memory code protection is disabled)
   CONFIG CPD = OFF ; Data Code Protection bit (Data memory code protection is disabled)
   CONFIG BOREN = OFF ; Brown Out Reset Selection bits (BOR enabled)
   CONFIG IESO = OFF ; Internal External Switchover bit (Internal/External Switchover mode is enabled)
   CONFIG FCMEN = OFF ; Fail-Safe Clock Monitor Enabled bit (Fail-Safe Clock Monitor is enabled)
-  CONFIG LVP = OFF ; Low Voltage Programming Enable bit (((PORTB) and 07Fh), 3/PGM pin has PGM function, low voltage programming enabled)
+  CONFIG LVP = ON ; Low Voltage Programming Enable bit (((PORTB) and 07Fh), 3/PGM pin has PGM function, low voltage programming enabled)
 
 ;CONFIG2
   CONFIG BOR4V = BOR40V ; Brown-out Reset Selection bit (Brown-out Reset set to 4.0V)
@@ -2507,11 +2507,24 @@ PUSH:
     MOVWF STATUS_TEMP ; guardamos el valor de w en variable.
        ; temporal de status
 
+TIMER:
+    BTFSS INTCON, 2
+    GOTO ISR
+    BCF INTCON, 2
+    INCF cont1, F
+    MOVLW 217
+    BANKSEL TMR0
+    MOVWF TMR0 ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
+
 ISR:
-    BTFSC INTCON, 0 ; Está encendido el bit ((INTCON) and 07Fh), 2?
-    CALL PRTB
-    BTFSC INTCON, 2
-    CALL TIMER
+    BTFSS INTCON, 0 ; Está encendido el bit ((INTCON) and 07Fh), 2?
+    GOTO POP
+    BANKSEL PORTB
+    BTFSS PORTB, 6
+    INCF PORTD, F
+    BTFSS PORTB, 7
+    DECF PORTD, F
+    BCF INTCON, 0
 
 POP:
     SWAPF STATUS_TEMP, W ; movemos los nibles de status de nuevo y los
@@ -2520,50 +2533,6 @@ POP:
     SWAPF W_TEMP, F ; Movemos los nibles de W en el registro temporal
     SWAPF W_TEMP, W ; Movemos los nibles de vuelta para tenerlo en W
     RETFIE ; Retornamos de la interrupción
-
-PRTB:
-    BTFSS INTCON, 0 ; Está encendido el bit ((INTCON) and 07Fh), 2?
-    RETURN
-    BANKSEL PORTB
-    BTFSS PORTB, 6
-    INCF PORTD, F
-    BTFSS PORTB, 7
-    DECF PORTD, F
-    BCF INTCON, 0
-    RETURN
-
-TIMER:
-    MOVLW 217
-    BANKSEL TMR0
-    MOVWF TMR0 ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
-    BCF INTCON, 2
-    INCF cont1, F
-    MOVF cont1, W
-    SUBLW 50
-    BTFSS STATUS, 2 ; verificamos bandera z
-    RETURN
-    CLRF cont1
-    GOTO veri1
-
-veri1:
-    INCF PORTB
-    INCF cont2, F
-    MOVF cont2, W
-    SUBLW 10
-    BTFSS STATUS, 2
-    RETURN
-    GOTO veri2
-
-veri2:
-    INCF cont3, F
-    MOVF cont3, W
-    CLRF cont2
-    SUBLW 6
-    BTFSS STATUS, 2
-    RETURN
-    CLRF cont2
-    CLRF cont3
-    RETURN
 
 ;*******************************************************************************
 ;Código Principal
@@ -2574,7 +2543,7 @@ PSECT CODE, delta=2, abs
 tabla:
     CLRF PCLATH
     BSF PCLATH, 0
-    ANDLW 0x0F ;Se pone límite de 15
+    ;ANDLW 0x0F ;Se pone límite de 15
     ADDWF PCL ;suma entre pcl y w
     RETLW 00111111B;0
     RETLW 00000110B;1
@@ -2586,12 +2555,7 @@ tabla:
     RETLW 00000111B;7
     RETLW 01111111B;8
     RETLW 01100111B;9
-    RETLW 01110111B;A
-    RETLW 01111100B;B
-    RETLW 00111001B;C
-    RETLW 01011110B;D
-    RETLW 01111001B;E
-    RETLW 01110001B;F
+    RETLW 00111111B;0
 
 main:
 
@@ -2658,20 +2622,37 @@ main:
 
     CLRF cont
     CLRF cont3
-    CLRF cont2
+    clrf cont2
     CLRF cont1
     BANKSEL TMR0
     MOVLW 217
     MOVWF TMR0 ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
 
+
 loop:
-    ;INCF PORTB
+    INCF PORTB, F
+    INCF cont, 1
+    INCF cont2, F
     MOVF cont2, W
     CALL tabla
     MOVWF PORTC
+    CALL veri
+    MOVF cont1, W
+    SUBLW 50
+    BTFSS STATUS, 2 ; verificamos bandera z
+    GOTO $-3
+    CLRF cont1
+    GOTO loop
+veri:
+    MOVF cont, W
+    SUBLW 10
+    BTFSS STATUS, 2
+    RETURN
+    INCF cont3, W
     MOVF cont3, W
     CALL tabla
     MOVWF PORTA
-    GOTO loop
+    CLRF cont
+    RETURN
 
 END

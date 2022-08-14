@@ -17,13 +17,13 @@ PROCESSOR 16F887
   CONFIG  FOSC = INTRC_NOCLKOUT ; Oscillator Selection bits (INTOSCIO oscillator: I/O function on RA6/OSC2/CLKOUT pin, I/O function on RA7/OSC1/CLKIN)
   CONFIG  WDTE = OFF            ; Watchdog Timer Enable bit (WDT disabled and can be enabled by SWDTEN bit of the WDTCON register)
   CONFIG  PWRTE = ON            ; Power-up Timer Enable bit (PWRT enabled)
-  CONFIG  MCLRE = ON            ; RE3/MCLR pin function select bit (RE3/MCLR pin function is MCLR)
+  CONFIG  MCLRE = OFF            ; RE3/MCLR pin function select bit (RE3/MCLR pin function is MCLR)
   CONFIG  CP = OFF              ; Code Protection bit (Program memory code protection is disabled)
   CONFIG  CPD = OFF             ; Data Code Protection bit (Data memory code protection is disabled)
   CONFIG  BOREN = OFF            ; Brown Out Reset Selection bits (BOR enabled)
   CONFIG  IESO = OFF             ; Internal External Switchover bit (Internal/External Switchover mode is enabled)
   CONFIG  FCMEN = OFF            ; Fail-Safe Clock Monitor Enabled bit (Fail-Safe Clock Monitor is enabled)
-  CONFIG  LVP = ON              ; Low Voltage Programming Enable bit (RB3/PGM pin has PGM function, low voltage programming enabled)
+  CONFIG  LVP = OFF             ; Low Voltage Programming Enable bit (RB3/PGM pin has PGM function, low voltage programming enabled)
 
 ;CONFIG2
   CONFIG  BOR4V = BOR40V        ; Brown-out Reset Selection bit (Brown-out Reset set to 4.0V)
@@ -36,6 +36,8 @@ PROCESSOR 16F887
 PSECT udata_shr
     cont: DS 1
     cont1: DS 1
+    cont2: DS 1
+    cont3: DS 1
     W_TEMP: DS 1
     STATUS_TEMP: DS 1
     
@@ -56,24 +58,11 @@ PUSH:
     MOVWF STATUS_TEMP	    ; guardamos el valor de w en variable. 
 			    ; temporal de status
     
-TIMER:
-    BTFSS INTCON, 2
-    GOTO ISR
-    BCF INTCON, 2
-    INCF cont1, F
-    MOVLW 217
-    BANKSEL TMR0
-    MOVWF TMR0	      ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
-    
 ISR:  
-    BTFSS INTCON, 0	    ; Está encendido el bit T0IF?
-    GOTO POP
-    BANKSEL PORTB
-    BTFSS PORTB, 6
-    INCF PORTA, F
-    BTFSS PORTB, 7
-    DECF PORTA, F
-    BCF INTCON, 0
+    BTFSC INTCON, 0	    ; Está encendido el bit T0IF?
+    CALL PRTB
+    BTFSC INTCON, 2
+    CALL TIMER
   
 POP:
     SWAPF STATUS_TEMP, W    ; movemos los nibles de status de nuevo y los
@@ -82,6 +71,50 @@ POP:
     SWAPF W_TEMP, F	    ; Movemos los nibles de W en el registro temporal
     SWAPF W_TEMP, W	    ; Movemos los nibles de vuelta para tenerlo en W
     RETFIE		    ; Retornamos de la interrupción
+    
+PRTB:
+    BTFSS INTCON, 0	    ; Está encendido el bit T0IF?
+    RETURN
+    BANKSEL PORTB
+    BTFSS PORTB, 6
+    INCF PORTD, F
+    BTFSS PORTB, 7
+    DECF PORTD, F
+    BCF INTCON, 0
+    RETURN   
+    
+TIMER:
+    MOVLW 217
+    BANKSEL TMR0
+    MOVWF TMR0		    ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
+    BCF INTCON, 2
+    INCF cont1, F
+    MOVF cont1, W
+    SUBLW 50
+    BTFSS STATUS, 2	; verificamos bandera z
+    RETURN
+    CLRF cont1
+    GOTO veri1
+    
+veri1:
+    INCF PORTB
+    INCF cont2, F
+    MOVF cont2, W
+    SUBLW 10
+    BTFSS STATUS, 2
+    RETURN
+    GOTO veri2
+    
+veri2:
+    INCF cont3, F
+    MOVF cont3, W
+    CLRF cont2
+    SUBLW 6
+    BTFSS STATUS, 2
+    RETURN
+    CLRF cont2
+    CLRF cont3
+    RETURN
 
 ;*******************************************************************************
 ;Código Principal
@@ -89,22 +122,28 @@ POP:
 PSECT CODE, delta=2, abs
  ORG 0x0100
  
-;tabla:
-    ;CLRF PCLATH
-    ;BSF PCLATH, 0
-    ;ANDLW 0x0F     ;Se pone límite de 15
-    ;ADDWF PCL      ;suma entre pcl y w
-    ;RETLW 00111111B;0
-    ;RETLW 00000110B;1
-    ;RETLW 01011011B;2
-    ;RETLW 01001111B;3
-    ;RETLW 01100110B;4
-    ;RETLW 01101101B;5
-    ;RETLW 01111101B;6
-    ;RETLW 00000111B;7
-    ;RETLW 01111111B;8
-    ;RETLW 01100111B;9
-       
+tabla:
+    CLRF PCLATH
+    BSF PCLATH, 0
+    ANDLW 0x0F     ;Se pone límite de 15
+    ADDWF PCL      ;suma entre pcl y w
+    RETLW 00111111B;0
+    RETLW 00000110B;1
+    RETLW 01011011B;2
+    RETLW 01001111B;3
+    RETLW 01100110B;4
+    RETLW 01101101B;5
+    RETLW 01111101B;6
+    RETLW 00000111B;7
+    RETLW 01111111B;8
+    RETLW 01100111B;9
+    RETLW 01110111B;A
+    RETLW 01111100B;B
+    RETLW 00111001B;C
+    RETLW 01011110B;D
+    RETLW 01111001B;E
+    RETLW 01110001B;F
+
 main:
     
     BANKSEL ANSEL  ;Puertos como digitales
@@ -145,10 +184,6 @@ main:
     BCF IOCB, 3
     BSF IOCB, 6
     BSF IOCB, 7
-    ;MOVLW 11000000B
-    ;MOVWF WPUB
-    ;MOVWF IOCB
-    ;CLRW
     
     BANKSEL INTCON
     BSF INTCON, 7
@@ -172,22 +207,22 @@ main:
     BSF OPTION_REG, 1
     BSF OPTION_REG, 0
     
+    CLRF cont
+    CLRF cont3
+    CLRF cont2
     CLRF cont1
     BANKSEL TMR0
+    MOVLW 217
     MOVWF TMR0	      ;CARGAMOS EL VALOR DE N = DESBORDE 100mS
-    
-    
+   
 loop:
-    INCF PORTB, F
-    ;INCF cont, F
-    ;MOVF cont, W
-    ;call table
-    ;MOVWF PORTB
-    MOVF cont1, W
-    SUBLW 50
-    BTFSS STATUS, 2	; verificamos bandera z
-    GOTO $-3
-    CLRF cont1
+    ;INCF PORTB
+    MOVF cont2, W
+    CALL tabla
+    MOVWF PORTC
+    MOVF cont3, W
+    CALL tabla
+    MOVWF PORTA
     GOTO loop
     
 END
