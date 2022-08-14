@@ -6,7 +6,7 @@ Linker command line:
   --edf=E:\Program Files\Microchip\xc8\v2.40\pic\dat\20220703182018_en.msgs \
   -cs -h+dist/default/production\lab4.X.production.sym \
   --cmf=dist/default/production\lab4.X.production.cmf -z -Q16F887 \
-  -oC:\Users\lemus\AppData\Local\Temp\xcAsdck.4 --fixupoverflow=error \
+  -oC:\Users\lemus\AppData\Local\Temp\xcAseoc.4 --fixupoverflow=error \
   -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
   -Mdist/default/production/lab4.X.production.map -E1 --acfsm=1493 \
   -ACODE=00h-07FFhx4 -ASTRCODE=00h-01FFFh -ASTRING=00h-0FFhx32 \
@@ -28,7 +28,7 @@ Machine type is 16F887
                 Name                               Link     Load   Length Selector   Space Scale
 build/default/production/main.o
                 config                             2007     2007        2        0       4
-                CODE                                  0        0      15E        0       0
+                CODE                                  0        0      15C        0       0
                 udata_shr                            70       70        6       70       1
 
 TOTAL           Name                               Link     Load   Length     Space
@@ -73,7 +73,7 @@ TOTAL           Name                               Link     Load   Length     Sp
         CLASS   EEDATA         
 
         CLASS   UNCLASSED
-                CODE                                  0        0      15E         0
+                CODE                                  0        0      15C         0
 
 
 SEGMENTS        Name                           Load    Length   Top    Selector   Space  Class     Delta
@@ -88,24 +88,24 @@ UNUSED ADDRESS RANGES
         BANK1            00A0-00EF             50           1
         BANK2            0110-016F             60           1
         BANK3            0190-01EF             60           1
-        CODE             015E-1FFF            800           2
+        CODE             015C-1FFF            800           2
         COMMON           0076-007F              A           1
-        CONST            015E-1FFF            100           2
+        CONST            015C-1FFF            100           2
         EEDATA           2100-21FF            100           2
-        ENTRY            015E-1FFF            100           2
+        ENTRY            015C-1FFF            100           2
         IDLOC            2000-2003              4           2
         RAM              0020-006F             50           1
                          00A0-00EF             50
                          0110-016F             60
                          0190-01EF             60
-        STRCODE          015E-1FFF           1EA2           2
-        STRING           015E-1FFF            100           2
+        STRCODE          015C-1FFF           1EA4           2
+        STRING           015C-1FFF            100           2
 
                                   Symbol Table
 
-__HCODE        CODE        015E  __Hcode        code        0000
+__HCODE        CODE        015C  __Hcode        code        0000
 __Hconfig      config      2009  __Hdata        data        0000
-__Hedata       edata       0000  __Hspace_0     (abs)       015E
+__Hedata       edata       0000  __Hspace_0     (abs)       015C
 __Hspace_1     (abs)       0076  __Hspace_3     (abs)       0000
 __Hspace_4     (abs)       4010  __Hudata       udata       0000
 __Hudata_bank0 udata_bank0 0000  __Hudata_bank1 udata_bank1 0000
