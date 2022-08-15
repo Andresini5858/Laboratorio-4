@@ -5,7 +5,7 @@
 ;Compilador: PIC-AS (v2.40), MPLAB X IDE (v6.00)
 ;Proyecto: Laboratorio 4
 ;Creado: 08/08/2022
-;Última Modificación: 13/08/22
+;Última Modificación: 14/08/22
 ;*******************************************************************************
 PROCESSOR 16F887
 #include <xc.inc>
@@ -20,7 +20,7 @@ PROCESSOR 16F887
   CONFIG  MCLRE = OFF            ; RE3/MCLR pin function select bit (RE3/MCLR pin function is MCLR)
   CONFIG  CP = OFF              ; Code Protection bit (Program memory code protection is disabled)
   CONFIG  CPD = OFF             ; Data Code Protection bit (Data memory code protection is disabled)
-  CONFIG  BOREN = OFF            ; Brown Out Reset Selection bits (BOR enabled)
+  CONFIG  BOREN = ON            ; Brown Out Reset Selection bits (BOR enabled)
   CONFIG  IESO = OFF             ; Internal External Switchover bit (Internal/External Switchover mode is enabled)
   CONFIG  FCMEN = OFF            ; Fail-Safe Clock Monitor Enabled bit (Fail-Safe Clock Monitor is enabled)
   CONFIG  LVP = OFF             ; Low Voltage Programming Enable bit (RB3/PGM pin has PGM function, low voltage programming enabled)
@@ -34,7 +34,7 @@ PROCESSOR 16F887
 ;Variables
 ;*******************************************************************************
 PSECT udata_shr
-    cont: DS 1
+    ban: DS 1
     cont1: DS 1
     cont2: DS 1
     cont3: DS 1
@@ -74,10 +74,14 @@ PRTB:
     BTFSS INTCON, 0	    ;REVISAR EL BIT DE INTERRUPCIONES DEL PUERTO B
     RETURN		    ;REGRESAR
     BANKSEL PORTB	    ;IR AL BANCO DONDE SE ENCUENTRA EL REGISTRO DE LOS PUERTOS
-    BTFSS PORTB, 6	    ;REVISAR SI EL BOTóN DE INCREMENTAR FUE PRESIONADO
-    INCF PORTD, F	    ;INCREMENTAR EL PUERTO B
-    BTFSS PORTB, 7	    ;REVISAR SI EL BOTóN DE DECREMENTAR FUE PRESIONADO
-    DECF PORTD, F	    ;DECREMENTAR EL PUERTO B
+    BTFSC PORTB, 6	    ;REVISAR SI EL BOTóN DE INCREMENTAR FUE PRESIONADO
+    CALL anti1		    ;LLAMAR AL ANTIRREBOTE
+    BTFSS PORTB, 6	    ;REVISAR SI SE DEJO DE PRESIONAR EL BOTON
+    CALL inc1
+    BTFSC PORTB, 7	    ;REVISAR SI EL BOTóN DE DECREMENTAR FUE PRESIONADO
+    CALL anti2
+    BTFSS PORTB, 7
+    CALL dec1
     BCF INTCON, 0	    ;LIMPIAR BIT DE INTERRUPCIóN DEL PUERTO B
     RETURN		    ;REGRESAR
     
@@ -113,6 +117,28 @@ veri2:
     CLRF cont2		    ;SI ES 0 LIMPIAR EL CONTADOR DE UNIDADES DE SEGUNDOS
     CLRF cont3              ;SI ES 0 LIMPIAR EL CONTADOR DE DECENAS DE SEGUNDOS
     RETURN		    ;RETORNAR, PARA LUEGO IR A POP
+
+inc1:			    ;FUNCION DE INCREMENTAR
+    BTFSS ban, 0
+    RETURN
+    INCF PORTD, F
+    CLRF ban
+    RETURN
+
+dec1:
+    BTFSS ban, 1	    ;FUNCION DE DECREMENTAR
+    RETURN
+    DECF PORTD, F
+    CLRF ban
+    RETURN
+
+anti1:			    ;ANTIRREBOTE 1
+    BSF ban, 0
+    RETURN
+    
+anti2:			    ;ANTIRREBOTE 2
+    BSF ban, 1
+    RETURN
 
 ;*******************************************************************************
 ;Código Principal
